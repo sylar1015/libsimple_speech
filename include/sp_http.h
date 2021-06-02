@@ -39,6 +39,9 @@ sp_http_response_t *sp_http_get(const char *url, sp_json_t *headers, int timeout
 sp_http_response_t *sp_http_post(const char *url,
     sp_json_t *headers, int timeout, const char *payload, int length);
 
+sp_http_response_t *sp_http_delete(const char *url, 
+    sp_json_t *headers, int timeout);
+
 sp_http_response_t *sp_http_upload(const char *url,
     sp_json_t *headers, int timeout, const char *payload, int length,
     const char *path);
@@ -54,6 +57,9 @@ void *sp_http_session_new();
 void sp_http_session_free(void *session);
 
 sp_http_response_t *sp_http_session_get(void *session, const char *url,
+    sp_json_t *headers, int timeout);
+
+sp_http_response_t *sp_http_session_delete(void *session, const char *url,
     sp_json_t *headers, int timeout);
 
 sp_http_response_t *sp_http_session_post(void *session, const char *url,

@@ -44,6 +44,20 @@ sp_http_response_t *sp_http_get(const char *url, sp_json_t *headers, int timeout
     return res;
 }
 
+sp_http_response_t *sp_http_delete(const char *url, sp_json_t *headers, int timeout)
+{
+    sp_return_val_if_fail(url, NULL);
+
+    sp_http_session_t *session = sp_http_session_new();
+    sp_return_val_if_fail(session, NULL);
+
+    sp_http_response_t *res = sp_http_session_delete(session, url, headers, timeout);
+
+    sp_http_session_free(session);
+    
+    return res;
+}
+
 sp_http_response_t *sp_http_post(const char *url, sp_json_t *headers,
     int timeout, const char *payload, int length)
 {
@@ -188,8 +202,6 @@ static sp_http_response_t *sp_http_session_perform(sp_http_session_t *session,
     {
         CURLcode ret = curl_easy_perform(curl);
 
-        printf("%s:%d, %s,%d\n", __FILE__, __LINE__, url, ret);
-
         if (ret != CURLE_OK)
         {
             sp_http_response_free(res);
@@ -199,8 +211,6 @@ static sp_http_response_t *sp_http_session_perform(sp_http_session_t *session,
 
         long status_code = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status_code);
-
-        printf("%s:%d, %d\n", __FILE__, __LINE__, status_code);
 
         res->status_code = status_code;
         
@@ -214,6 +224,19 @@ static sp_http_response_t *sp_http_session_perform(sp_http_session_t *session,
 sp_http_response_t *sp_http_session_get(void *session, const char *url,
     sp_json_t *headers, int timeout)
 {
+    return sp_http_session_perform(session, url, headers, timeout);
+}
+
+sp_http_response_t *sp_http_session_delete(void *session, const char *url,
+    sp_json_t *headers, int timeout)
+{
+    sp_return_val_if_fail(session && url, NULL);
+
+    sp_http_session_t *s = (sp_http_session_t *)session;
+
+    CURL *curl = s->curl;
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+
     return sp_http_session_perform(session, url, headers, timeout);
 }
 

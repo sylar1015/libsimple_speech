@@ -29,11 +29,8 @@ extern "C"
 typedef struct sp_speech_asr_callback_t
 {
    /* audio stream asr */
-   void (*on_partial_transcription)(const char* task_id, const char* name, const char* content);
-   void (*on_final_transcription)(const char* task_id, const char* name, const char* content);
-
-   /* audio file asr */
-   void (*on_file_transcription)(const char* task_id, const char* json_text);
+   void (*on_partial_transcription)(const char *task_id, const char *name, const char *content);
+   void (*on_final_transcription)(const char *task_id, const char *name, const char *content);
 
    /* common */
    void (*on_error)(const char*task_id, int error_code);
@@ -47,14 +44,14 @@ int sp_speech_set_global_callbacks(sp_speech_asr_callback_t* callbacks);
 
 /* params */
 void* sp_speech_params_new();
-int sp_speech_params_set(const char* key, const char* value);
+int sp_speech_params_set(void *params, const char* key, const char* value);
 const char* sp_speech_params_get(void *params /*in*/, const char* key /*in*/);
 void sp_speech_params_free(void *params /*in*/);
 
 /* file asr api */
 int sp_speech_asr_file_upload(char *url /*out*/, const char* path /*in*/);
 int sp_speech_asr_file_start(char* task_id /*out*/, void* params /*in*/, const char* json_text /*in*/);
-int sp_speech_asr_file_query(char** json_text /*out*/, const char* task_id /*in*/);
+int sp_speech_asr_file_query(char **json_text /*out sp_free later*/, const char* task_id /*in*/);
 int sp_speech_asr_file_stop(const char* task_id /*in*/);
 
 /* stream asr api */
