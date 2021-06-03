@@ -132,11 +132,17 @@ int sp_speech_asr_file_upload(char *url /*out*/, const char* path /*in*/)
 {
     sp_return_val_if_fail(url && path, -1);
 
-    sp_http_response_t *res = sp_http_upload(s_handle.ltasr_upload_url, NULL, 0, NULL, 0, path);
+    sp_json_t *headers = NULL;
+    //headers = sp_json_object_new();
+    //sp_json_object_add(headers, "Expect", sp_json_string(""));
+
+    sp_http_response_t *res = sp_http_post_file(s_handle.ltasr_upload_url, headers, 0, path);
+    //sp_json_free(headers);
 
     sp_return_val_if_fail(res != NULL, -1);
 
     const char *body = sp_string_buffer_string(res->raw_body);
+    printf("%s\n", body);
     sp_return_val_if_fail(body != NULL, -1);
 
     sp_json_t *json = sp_json_parse(body);
@@ -182,6 +188,20 @@ int sp_speech_asr_file_start(char* task_id /*out*/, void* params /*in*/, const c
     else 
     {
         /* FixMe: add params handler */
+        const char *audio_url = sp_json_object_item(params, "audioUrl");
+        sp_return_val_if_fail(audio_url, -1);
+
+        sp_json_t *file_data = sp_json_object_new();
+        sp_json_object_add(file_data, "encoding", sp_json_string("pcm"));
+        sp_json_object_add(file_data, "language", sp_json_string("MANDARIN"));
+        sp_json_object_add(file_data, "sampleRateHertz", sp_json_int(16000));
+        sp_json_object_add(file_data, "audioName", sp_json_string("sp_speech.wav"));
+
+        sp_json_t *recognition_config = sp_json_object_new();
+        sp_json_object_add(recognition_config, "model", sp_json_string("GENERAL"));
+        sp_json_object_add(recognition_config, "enablePunctuation", sp_json_bool(true));
+
+        sp_json_t *json = sp_json_object_new();
     }
 
     return 0;

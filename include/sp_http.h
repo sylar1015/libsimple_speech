@@ -42,9 +42,8 @@ sp_http_response_t *sp_http_post(const char *url,
 sp_http_response_t *sp_http_delete(const char *url, 
     sp_json_t *headers, int timeout);
 
-sp_http_response_t *sp_http_upload(const char *url,
-    sp_json_t *headers, int timeout, const char *payload, int length,
-    const char *path);
+sp_http_response_t *sp_http_post_file(const char *url,
+    sp_json_t *headers, int timeout, const char *path);
 
 sp_http_response_t *sp_http_post_json(const char *url,
     sp_json_t *headers, int timeout, sp_json_t *json);

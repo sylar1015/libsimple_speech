@@ -15,6 +15,7 @@ static int test_string_buffer();
 static int test_http();
 static int test_ini();
 static int test_ltasr_upload();
+static int test_ltasr();
 
 
 static test_case_t test_cases[] = {
@@ -250,10 +251,96 @@ static int test_ltasr_upload()
     sp_speech_set_global_params(SP_SPEECH_API_GATEWAY_URL, "http://192.168.0.85:8089");
 
     char url[1024] = {0};
-    res = sp_speech_asr_file_upload(url, "./test.ini");
+    res = sp_speech_asr_file_upload(url, "./test.wav");
     sp_return_val_if_fail(res == 0, -1);
 
     printf("upload success. url is %s\n", url);
+
+    sp_speech_fini();
+    return 0;
+}
+
+static int test_ltasr()
+{
+    int res = sp_speech_init();
+    sp_return_val_if_fail(res == 0, -1);
+
+    sp_speech_set_global_params(SP_SPEECH_API_GATEWAY_URL, "http://192.168.0.85:8089");
+
+    char url[1024] = {0};
+    res = sp_speech_asr_file_upload(url, "./test.wav");
+    sp_return_val_if_fail(res == 0, -1);
+
+    printf("upload success. url is %s\n", url);
+
+    sp_json_t *file_data = sp_json_object_new();
+    sp_json_object_add(file_data, "encoding", sp_json_string("pcm"));
+    sp_json_object_add(file_data, "language", sp_json_string("MANDARIN"));
+    sp_json_object_add(file_data, "sampleRateHertz", sp_json_int(16000));
+    sp_json_object_add(file_data, "audioName", sp_json_string("test.wav"));
+
+    sp_json_t *recognition_config = sp_json_object_new();
+    sp_json_object_add(recognition_config, "model", sp_json_string("general"));
+    sp_json_object_add(recognition_config, "enablePunctuation", sp_json_bool(true));
+    sp_json_object_add(recognition_config, "enableItn", sp_json_bool(true));
+    sp_json_object_add(recognition_config, "enableWordTimeOffsets", sp_json_bool(true));
+
+    sp_json_t *speech_contexts = sp_json_array_new();
+    sp_json_array_add(speech_contexts, sp_json_string("测试"));
+    sp_json_object_add(recognition_config, "speechContexts", speech_contexts);
+
+    sp_json_t *diarization_config = sp_json_object_new();
+    sp_json_object_add(diarization_config, "enableDiarization", sp_json_bool(false));
+    sp_json_object_add(diarization_config, "speakerNumber", sp_json_int(2));
+    sp_json_object_add(recognition_config, "diarizationConfig", diarization_config);
+
+    char task_id[256] = {0};
+    sp_json_t *json = sp_json_object_new();
+    sp_json_object_add(json, "audioUrl", url);
+    sp_json_object_add(json, "fileData", file_data);
+    sp_json_object_add(json, "recognitionConfig", recognition_config);
+
+    const char *json_text = sp_json_text(json_text);
+
+    res = sp_speech_asr_file_start(task_id, NULL, json_text);
+
+    sp_free(json_text);
+    sp_json_free(json);
+
+    sp_return_val_if_fail(res == 0, -1);
+
+    while (1)
+    {
+        char *json_text = NULL;
+        res = sp_speech_asr_file_query(&json_text, task_id);
+        sp_return_val_if_fail(res == 0, -1);
+
+
+        json = sp_json_parse(json_text);
+        sp_json_t *node = sp_json_object_item(json, "rtn");
+        sp_return_val_if_fail(node->valueint == 0, -1);
+
+        sp_json_t *data = sp_json_object_item(json, "data");
+        node = sp_json_object_item(data, "statusCode");
+
+        if (node->valueint == 3)
+        {
+            node = sp_json_object_item(data, "speechResult");
+            char *result_text = sp_json_text(node);
+            printf("%s\n", result_text);
+            sp_free(result_text);
+        }
+        else{
+            node = sp_json_object_item(data, "statusText");
+            printf("%s\n", node->valuestring);
+        }
+
+        sp_free(json_text);
+        sp_json_free(json);
+
+        sp_usleep(SP_SECOND * 5);
+    }
+    
 
     sp_speech_fini();
     return 0;

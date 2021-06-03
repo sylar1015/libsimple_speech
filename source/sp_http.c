@@ -26,9 +26,11 @@ typedef struct
 static struct curl_slist *sp_headers_2_curl_headers(sp_json_t *headers);
 static size_t sp_http_write_callback(void *data, size_t size, size_t nmemb, void *arg);
 static size_t sp_http_header_callback(void *data, size_t size, size_t nmemb, void *arg);
+static size_t sp_http_read_callback(void *data, size_t size, size_t nmemb, void *arg);
 static sp_http_response_t *sp_http_session_perform(sp_http_session_t *session,
     const char *url, sp_json_t *headers, int timeout);
 static sp_http_response_t *sp_http_response_new();
+
 
 sp_http_response_t *sp_http_get(const char *url, sp_json_t *headers, int timeout)
 {
@@ -73,37 +75,40 @@ sp_http_response_t *sp_http_post(const char *url, sp_json_t *headers,
     return res;
 }
 
-sp_http_response_t *sp_http_upload(const char *url,
-    sp_json_t *headers, int timeout, const char *payload, int length,
-    const char *path)
+sp_http_response_t *sp_http_post_file(const char *url,
+    sp_json_t *headers, int timeout, const char *path)
 {
     sp_return_val_if_fail(url && path && !sp_string_empty(url), NULL);
-
-    FILE *fp = fopen(path, "rb");
-    sp_return_val_if_fail(fp != NULL, NULL);
 
     sp_http_session_t *session = sp_http_session_new();
     sp_return_val_if_fail(session, NULL);
 
     CURL *curl = session->curl;
 
-    if (payload)
-    {
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_mime *form = curl_mime_init(curl);
+    curl_mimepart *field = curl_mime_addpart(form);
 
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, length);
-    }
+    curl_mime_name(field, "file");
+    curl_mime_filedata(field, path);
 
-    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+    //field = curl_mime_addpart(form);
+    //curl_mime_name(field, "filename");
+    //curl_mime_data(field, "postit2.c", CURL_ZERO_TERMINATED);
+
+    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+
+    //curl_easy_setopt(curl, CURLOPT_POST, 1L);
     /* set where to read from (on Windows you need to use READFUNCTION too) */
-    curl_easy_setopt(curl, CURLOPT_READDATA, fp);
+    //curl_easy_setopt(curl, CURLOPT_READDATA, fp);
+    //curl_easy_setopt(curl, CURLOPT_READFUNCTION, sp_http_read_callback);
+    //curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, file_size);
+    //curl_easy_setopt(curl, CURLOPT_INFILE, fp);
 
     sp_http_response_t *res = sp_http_session_perform(session, url, headers, timeout);
 
-    sp_http_session_free(session);
+    curl_mime_free(form);
 
-    fclose(fp);
+    sp_http_session_free(session);
 
     return res;
 }
@@ -302,6 +307,12 @@ static size_t sp_http_write_callback(void *data, size_t size, size_t nmemb, void
     sp_string_buffer_append(res->raw_body, data, length);
 
     return length;
+}
+
+static size_t sp_http_read_callback(void *data, size_t size, size_t nmemb, void *arg)
+{
+    size_t sizes = fread(data, size, nmemb, (FILE *)arg);
+	return sizes;
 }
 
 static size_t sp_http_header_callback(void *data, size_t size, size_t nmemb, void *arg)

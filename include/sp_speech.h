@@ -49,13 +49,14 @@ const char* sp_speech_params_get(void *params /*in*/, const char* key /*in*/);
 void sp_speech_params_free(void *params /*in*/);
 
 /* file asr api */
-int sp_speech_asr_file_upload(char *url /*out*/, const char* path /*in*/);
-int sp_speech_asr_file_start(char* task_id /*out*/, void* params /*in*/, const char* json_text /*in*/);
-int sp_speech_asr_file_query(char **json_text /*out sp_free later*/, const char* task_id /*in*/);
-int sp_speech_asr_file_stop(const char* task_id /*in*/);
+int sp_speech_asr_file_upload(char *url /*out*/, const char *path /*in*/);
+int sp_speech_asr_file_start(char *task_id /*out*/, void *params /*in*/, const char *json_text /*in*/);
+int sp_speech_asr_file_query(char **json_text /*out sp_free later*/, const char *task_id /*in*/);
+int sp_speech_asr_file_stop(const char *task_id /*in*/);
 
 /* stream asr api */
-int sp_speech_asr_stream_start(char* task_id /*out*/, void* params /*in*/, const char* json_text /*in*/);
+int sp_speech_asr_stream_start(char *task_id /*out*/, void *params /*in*/, const char *json_text /*in*/);
+int sp_speech_asr_stream_stop(const char *task_id);
 
 #ifdef __cplusplus
 }

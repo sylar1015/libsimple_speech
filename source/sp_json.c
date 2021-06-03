@@ -101,6 +101,12 @@ sp_json_t *sp_json_double(double val)
     return cJSON_CreateNumber(val);
 }
 
+sp_json_t *sp_json_bool(bool b)
+{
+    int v = b ? 1 : 0;
+    return cJSON_CreateBool(v);
+}
+
 void sp_json_free(sp_json_t *json)
 {
     sp_return_if_fail(json);

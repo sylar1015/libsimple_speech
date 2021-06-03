@@ -43,6 +43,7 @@ void sp_json_object_replace
 sp_json_t *sp_json_int(int val);
 sp_json_t *sp_json_string(const char *string);
 sp_json_t *sp_json_double(double val);
+sp_json_t *sp_json_bool(bool b);
 
 void sp_json_free(sp_json_t *json);
 
