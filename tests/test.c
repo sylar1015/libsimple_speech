@@ -273,39 +273,14 @@ static int test_ltasr()
 
     printf("upload success. url is %s\n", url);
 
-    sp_json_t *file_data = sp_json_object_new();
-    sp_json_object_add(file_data, "encoding", sp_json_string("pcm"));
-    sp_json_object_add(file_data, "language", sp_json_string("MANDARIN"));
-    sp_json_object_add(file_data, "sampleRateHertz", sp_json_int(16000));
-    sp_json_object_add(file_data, "audioName", sp_json_string("test.wav"));
-
-    sp_json_t *recognition_config = sp_json_object_new();
-    sp_json_object_add(recognition_config, "model", sp_json_string("general"));
-    sp_json_object_add(recognition_config, "enablePunctuation", sp_json_bool(true));
-    sp_json_object_add(recognition_config, "enableItn", sp_json_bool(true));
-    sp_json_object_add(recognition_config, "enableWordTimeOffsets", sp_json_bool(true));
-
-    sp_json_t *speech_contexts = sp_json_array_new();
-    sp_json_array_add(speech_contexts, sp_json_string("测试"));
-    sp_json_object_add(recognition_config, "speechContexts", speech_contexts);
-
-    sp_json_t *diarization_config = sp_json_object_new();
-    sp_json_object_add(diarization_config, "enableDiarization", sp_json_bool(false));
-    sp_json_object_add(diarization_config, "speakerNumber", sp_json_int(2));
-    sp_json_object_add(recognition_config, "diarizationConfig", diarization_config);
 
     char task_id[256] = {0};
-    sp_json_t *json = sp_json_object_new();
-    sp_json_object_add(json, "audioUrl", url);
-    sp_json_object_add(json, "fileData", file_data);
-    sp_json_object_add(json, "recognitionConfig", recognition_config);
+    void *params = sp_speech_params_new();
+    sp_speech_params_set(params, "audio_url", "");
 
-    const char *json_text = sp_json_text(json_text);
+    res = sp_speech_asr_file_start(task_id, params);
 
-    res = sp_speech_asr_file_start(task_id, NULL, json_text);
-
-    sp_free(json_text);
-    sp_json_free(json);
+    sp_speech_params_free(params);
 
     sp_return_val_if_fail(res == 0, -1);
 
@@ -316,7 +291,7 @@ static int test_ltasr()
         sp_return_val_if_fail(res == 0, -1);
 
 
-        json = sp_json_parse(json_text);
+        sp_json_t *json = sp_json_parse(json_text);
         sp_json_t *node = sp_json_object_item(json, "rtn");
         sp_return_val_if_fail(node->valueint == 0, -1);
 

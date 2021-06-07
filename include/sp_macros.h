@@ -59,6 +59,11 @@ extern "C"
 #define __check_printf__(m, n)
 #endif
 
+#define sp_op_if(expr, op) \
+    if likely(expr) { \
+        op; \
+    }
+
 #define sp_return_if_fail(expr) \
     if likely(expr) {} else { \
         return; \
@@ -71,6 +76,12 @@ extern "C"
 
 #define sp_break_if_fail(expr) \
     if likely(expr) {} else { \
+        break; \
+    }
+
+#define sp_break_op_if_fail(expr, op) \
+    if likely(expr) {} else { \
+        op; \
         break; \
     }
 

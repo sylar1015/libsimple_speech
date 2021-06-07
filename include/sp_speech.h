@@ -1,4 +1,4 @@
-/* Copyright (C) 2017-2017 Liang Sun <sylar1015@163.com>
+/* Copyright (C) 2021-2021 Liang Sun <sylar1015@163.com>
    This file is part of the Simple C Library
  
    This library is free software; you can redistribute it and/or
@@ -50,7 +50,23 @@ void sp_speech_params_free(void *params /*in*/);
 
 /* file asr api */
 int sp_speech_asr_file_upload(char *url /*out*/, const char *path /*in*/);
-int sp_speech_asr_file_start(char *task_id /*out*/, void *params /*in*/, const char *json_text /*in*/);
+/*
+ * @param key 参考识别参数
+ * ---------------------------------
+ * key                  : required ： example value  
+ * ---------------------------------
+ * "audio_url"          :   must   ： http://sp_speech.h or file:///sp_speech.h
+ * "audio_name"         :          ： sp_speech.h
+ * "sample_rate"        :          ： 16000
+ * "encoding"           :          :  pcm
+ * "language"           :          :  MANDARIN
+ * "model"              :          :  GENERAL
+ * "speech_contexts"    :          :  [测试, 热词]
+ * "enable_diarization" :          :  true
+ * "speaker_number"     :          :  2
+ * ""
+ */
+int sp_speech_asr_file_start(char *task_id /*out*/, void *params /*in*/);
 int sp_speech_asr_file_query(char **json_text /*out sp_free later*/, const char *task_id /*in*/);
 int sp_speech_asr_file_stop(const char *task_id /*in*/);
 

@@ -24,7 +24,7 @@ typedef struct sp_speech_handle_t {
 
     char api_gateway_url[1024];
 
-    char download_url[1024];
+    //char download_url[1024];
 
     char ltasr_upload_url[1024];
     char ltasr_create_url[1024];
@@ -33,7 +33,12 @@ typedef struct sp_speech_handle_t {
 
 } sp_speech_handle_t;
 
+/* module handle */
 static sp_speech_handle_t s_handle;
+
+/* helper functions */
+static int build_ltasr_payload(sp_json_t **json, void *params);
+static int build_rtasr_payload(sp_json_t **json, void *params);
 
 int sp_speech_init()
 {
@@ -75,8 +80,8 @@ int sp_speech_set_global_params(const char *key, const char *value)
         sp_string_append(s_handle.ltasr_upload_url, "%s", s_handle.api_gateway_url);
         sp_string_append(s_handle.ltasr_upload_url, "%s", "/file/ltasr/upload");
 
-        sp_string_append(s_handle.download_url, "%s", s_handle.api_gateway_url);
-        sp_string_append(s_handle.download_url, "%s", "/file/download/");
+        //sp_string_append(s_handle.download_url, "%s", s_handle.api_gateway_url);
+        //sp_string_append(s_handle.download_url, "%s", "/file/download/");
 
         sp_string_append(s_handle.ltasr_create_url, "%s", s_handle.api_gateway_url);
         sp_string_append(s_handle.ltasr_create_url, "%s", "/file/ltasr/create");
@@ -133,78 +138,68 @@ int sp_speech_asr_file_upload(char *url /*out*/, const char* path /*in*/)
     sp_return_val_if_fail(url && path, -1);
 
     sp_json_t *headers = NULL;
-    //headers = sp_json_object_new();
-    //sp_json_object_add(headers, "Expect", sp_json_string(""));
 
     sp_http_response_t *res = sp_http_post_file(s_handle.ltasr_upload_url, headers, 0, path);
-    //sp_json_free(headers);
-
     sp_return_val_if_fail(res != NULL, -1);
 
-    const char *body = sp_string_buffer_string(res->raw_body);
-    printf("%s\n", body);
-    sp_return_val_if_fail(body != NULL, -1);
+    int result = 0;
+    sp_json_t *json = NULL;
 
-    sp_json_t *json = sp_json_parse(body);
-    sp_return_val_if_fail(json != NULL, -1);
+    do {
 
-    sp_json_t *node = sp_json_object_item(json, "result");
-    sp_return_val_if_fail(node != NULL, -1);
+        const char *body = sp_string_buffer_string(res->raw_body);
+        sp_break_op_if_fail(body != NULL, result = -1);
 
-    node = sp_json_object_item(node, "fileId");
-    sp_return_val_if_fail(node != NULL, -1);
+        json = sp_json_parse(body);
+        sp_break_op_if_fail(json != NULL, result = -1);
 
-    sp_string_clear(url);
-    sp_string_append(url, "%s%d", s_handle.download_url, node->valueint);
+        sp_json_t *node = sp_json_object_item(json, "result");
+        sp_break_op_if_fail(node != NULL, result = -1);
 
-    sp_http_response_free(res);
+        node = sp_json_object_item(node, "fileUrl");
+        sp_break_op_if_fail(node != NULL, result = -1);
 
-    return 0;
+        sp_string_clear(url);
+        sp_string_copy(url, node->valuestring);
+
+    } while (0);
+
+    sp_op_if(json != NULL, sp_json_free(json));
+
+    sp_op_if(res != NULL, sp_http_response_free(res));
+
+    return result;
 }
 
-int sp_speech_asr_file_start(char* task_id /*out*/, void* params /*in*/, const char* json_text /*in*/)
+int sp_speech_asr_file_start(char* task_id /*out*/, void* params /*in*/)
 {
-    sp_return_val_if_fail(task_id && (params || json_text), -1);
+    sp_return_val_if_fail(task_id && params, -1);
 
-    /* use params or json_text depends on non-empty */
-    if (json_text)
-    {
-        sp_json_t *json = sp_json_parse(json_text);
-        sp_return_val_if_fail(json, -1);
+    sp_json_t *json = NULL;
+    sp_return_val_if_fail(build_ltasr_payload(&json, params) == 0, -1);
 
-        sp_http_response_t *res = sp_http_post_json(s_handle.ltasr_create_url, NULL, 0, json);
-        sp_return_val_if_fail(res, -1);
+    sp_http_response_t *res = sp_http_post_json(s_handle.ltasr_create_url, NULL, 0, json);
+    sp_json_free(json);
+    sp_return_val_if_fail(res, -1);
 
-        sp_json_free(json);
+    json = sp_json_parse(sp_string_buffer_string(res->raw_body));
+    sp_return_val_if_fail(json, -1);
 
-        json = sp_json_parse(sp_string_buffer_string(res->raw_body));
-        sp_return_val_if_fail(json, -1);
+    int result = 0;
+
+    do {
 
         sp_json_t *node = sp_json_object_item(json, "taskId");
-        sp_return_val_if_fail(node, -1);
+        result = node != NULL ? 0 : -1;
+        sp_break_if_fail(node != NULL);
 
         sp_string_copy(task_id, node->valuestring);
-    }
-    else 
-    {
-        /* FixMe: add params handler */
-        const char *audio_url = sp_json_object_item(params, "audioUrl");
-        sp_return_val_if_fail(audio_url, -1);
 
-        sp_json_t *file_data = sp_json_object_new();
-        sp_json_object_add(file_data, "encoding", sp_json_string("pcm"));
-        sp_json_object_add(file_data, "language", sp_json_string("MANDARIN"));
-        sp_json_object_add(file_data, "sampleRateHertz", sp_json_int(16000));
-        sp_json_object_add(file_data, "audioName", sp_json_string("sp_speech.wav"));
+    } while (0);
 
-        sp_json_t *recognition_config = sp_json_object_new();
-        sp_json_object_add(recognition_config, "model", sp_json_string("GENERAL"));
-        sp_json_object_add(recognition_config, "enablePunctuation", sp_json_bool(true));
-
-        sp_json_t *json = sp_json_object_new();
-    }
-
-    return 0;
+    sp_json_free(json);
+        
+    return result;
 }
 
 int sp_speech_asr_file_query(char **json_text /*out*/, const char* task_id /*in*/)
@@ -250,6 +245,64 @@ int sp_speech_asr_file_stop(const char *task_id /*in*/)
 }
 
 int sp_speech_asr_stream_start(char *task_id /*out*/, void *params /*in*/, const char *json_text /*in*/)
+{
+    return 0;
+}
+
+static int build_ltasr_payload(sp_json_t **out_json, void *params)
+{
+    sp_return_val_if_fail(out_json && params, -1);
+
+    sp_json_t *node = sp_json_object_item(params, "audio_url");
+    sp_return_val_if_fail(node && node->valuestring, -1);
+    const char *audio_url = node->valuestring;
+
+    node = sp_json_object_item(params, "audio_name");
+    const char *audio_name = node ? node->valuestring : "sp_speech.wav";
+
+    node = sp_json_object_item(params, "speech_contexts");
+    const char *speech_context = node ? node->valuestring : "[]";
+
+    node = sp_json_object_item(params, "enable_diarization");
+    bool enable_diarization = node ? sp_string_equal(node->valuestring, "true") : false;
+
+    node = sp_json_object_item(params, "speaker_number");
+    int speaker_number = node ? atoi(node->valuestring) : 1;
+
+    sp_json_t *json = sp_json_object_new();
+
+    {
+        sp_json_t *file_data = sp_json_object_new();
+        sp_json_object_add(file_data, "audioUrl", sp_json_string(audio_url));
+        sp_json_object_add(file_data, "encoding", sp_json_string("pcm"));
+        sp_json_object_add(file_data, "language", sp_json_string("MANDARIN"));
+        sp_json_object_add(file_data, "sampleRateHertz", sp_json_int(16000));
+        sp_json_object_add(file_data, "audioName", sp_json_string(audio_name));
+
+        sp_json_object_add(json, "fileData", file_data);
+    }
+
+    {
+        sp_json_t *recognition_config = sp_json_object_new();
+        sp_json_object_add(recognition_config, "model", sp_json_string("GENERAL"));
+        sp_json_object_add(recognition_config, "enablePunctuation", sp_json_bool(true));
+        sp_json_object_add(recognition_config, "enableItn", sp_json_bool(true));
+        sp_json_object_add(recognition_config, "enableWordTimeOffsets", sp_json_bool(true));
+        sp_json_object_add(recognition_config, "speechContexts", sp_json_parse(speech_context));
+        sp_json_t *diarization_config = sp_json_object_new();
+        sp_json_object_add(diarization_config, "enableDiarization", sp_json_bool(enable_diarization));
+        sp_json_object_add(diarization_config, "speakerNumber", sp_json_int(speaker_number));
+        sp_json_object_add(recognition_config, "diarizationConfig", diarization_config);
+
+        sp_json_object_add(json, "recognitionConfig", recognition_config);
+    }
+
+    *out_json = json;
+
+    return 0;
+}
+
+static int build_rtasr_payload(sp_json_t **json, void *params)
 {
     return 0;
 }
