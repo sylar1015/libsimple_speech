@@ -64,6 +64,11 @@ extern "C"
         op; \
     }
 
+#define sp_op_if_unlikely(expr, op) \
+    if unlikely(expr) { \
+        op; \
+    }
+
 #define sp_return_if_fail(expr) \
     if likely(expr) {} else { \
         return; \

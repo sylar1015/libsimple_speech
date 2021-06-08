@@ -15,6 +15,7 @@ static int test_string_buffer();
 static int test_http();
 static int test_ini();
 static int test_ltasr_upload();
+static int test_ltasr_list();
 static int test_ltasr();
 
 
@@ -28,8 +29,9 @@ static test_case_t test_cases[] = {
     {"test_string_buffer", test_string_buffer},
     //{"test_http", test_http},
     {"test_ini", test_ini},
-    {"test_ltasr_upload", test_ltasr_upload},
-    //{"test_jsonrpc_server", test_jsonrpc_server},
+    //{"test_ltasr_upload", test_ltasr_upload},
+    //{"test_ltasr_list", test_ltasr_list},
+    {"test_ltasr", test_ltasr},
 };
 
 int main()
@@ -260,6 +262,30 @@ static int test_ltasr_upload()
     return 0;
 }
 
+static int test_ltasr_list()
+{
+    int res = sp_speech_init();
+    sp_return_val_if_fail(res == 0, -1);
+
+    sp_speech_set_global_params(SP_SPEECH_API_GATEWAY_URL, "http://192.168.0.85:8089");
+
+    char *json_text = NULL;
+
+    void *params = sp_speech_params_new();
+    sp_speech_params_set(params, "start_time", "2021-05-17 02:13:48");
+    res = sp_speech_asr_file_list(&json_text, params);
+
+    sp_speech_params_free(params);
+    sp_return_val_if_fail(res == 0, -1);
+
+    printf("ltasr list success. response is %s\n", json_text);
+
+    sp_free(json_text);
+
+    sp_speech_fini();
+    return 0;
+}
+
 static int test_ltasr()
 {
     int res = sp_speech_init();
@@ -268,6 +294,7 @@ static int test_ltasr()
     sp_speech_set_global_params(SP_SPEECH_API_GATEWAY_URL, "http://192.168.0.85:8089");
 
     char url[1024] = {0};
+    //sp_string_copy(url, "http://192.168.0.85:8089/file/download/1401829911290843136");
     res = sp_speech_asr_file_upload(url, "./test.wav");
     sp_return_val_if_fail(res == 0, -1);
 
@@ -276,13 +303,15 @@ static int test_ltasr()
 
     char task_id[256] = {0};
     void *params = sp_speech_params_new();
-    sp_speech_params_set(params, "audio_url", "");
+    sp_speech_params_set(params, "audio_url", url);
 
     res = sp_speech_asr_file_start(task_id, params);
 
     sp_speech_params_free(params);
 
     sp_return_val_if_fail(res == 0, -1);
+
+    printf("task_id is %s\n", task_id);
 
     while (1)
     {
@@ -292,21 +321,21 @@ static int test_ltasr()
 
 
         sp_json_t *json = sp_json_parse(json_text);
-        sp_json_t *node = sp_json_object_item(json, "rtn");
+        sp_json_t *node = sp_json_object_item(json, "code");
         sp_return_val_if_fail(node->valueint == 0, -1);
 
-        sp_json_t *data = sp_json_object_item(json, "data");
-        node = sp_json_object_item(data, "statusCode");
+        sp_json_t *data = sp_json_object_item(json, "result");
+        node = sp_json_object_item(data, "statusText");
 
-        if (node->valueint == 3)
+        if (sp_string_equal(node->valuestring, "TASK_SUCC"))
         {
             node = sp_json_object_item(data, "speechResult");
             char *result_text = sp_json_text(node);
             printf("%s\n", result_text);
             sp_free(result_text);
+            break;
         }
         else{
-            node = sp_json_object_item(data, "statusText");
             printf("%s\n", node->valuestring);
         }
 
@@ -316,7 +345,6 @@ static int test_ltasr()
         sp_usleep(SP_SECOND * 5);
     }
     
-
     sp_speech_fini();
     return 0;
 }

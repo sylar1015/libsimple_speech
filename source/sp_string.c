@@ -66,12 +66,13 @@ int sp_string_find(const char *str, const char *sub)
 
 char *sp_string_between(const char *str, const char *start, const char *end, char *sub)
 {
-    sp_return_val_if_fail(str && start && end && sub, NULL);
+    sp_return_val_if_fail(str && start && sub, NULL);
 
     int pos_start = sp_string_find(str, start) + sp_string_length(start);
     sp_return_val_if_fail(pos_start >= 0, NULL);
-    
-    int length = sp_string_find(str + pos_start, end);
+
+    int length = end ? sp_string_find(str + pos_start, end) : sp_string_length(str) - pos_start;
+
     sp_return_val_if_fail(length >= 0, NULL);
 
     sp_string_ncopy(sub, str + pos_start, length);

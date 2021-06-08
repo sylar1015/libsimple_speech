@@ -61,17 +61,34 @@ int sp_speech_asr_file_upload(char *url /*out*/, const char *path /*in*/);
  * "encoding"           :          :  pcm
  * "language"           :          :  MANDARIN
  * "model"              :          :  GENERAL
- * "speech_contexts"    :          :  [测试, 热词]
+ * "speech_contexts"    :          :  ["测试", "热词"]
  * "enable_diarization" :          :  true
  * "speaker_number"     :          :  2
- * ""
+ * "enable_voiceprint"  :          :  false
+ * "replace"            :          : [{"keyword":"string", "replace":"string"}]
  */
 int sp_speech_asr_file_start(char *task_id /*out*/, void *params /*in*/);
+
 int sp_speech_asr_file_query(char **json_text /*out sp_free later*/, const char *task_id /*in*/);
+
+/*
+ * @param key 参考识别参数
+ * ---------------------------------
+ * key                  : required ： example value  
+ * ---------------------------------
+ * "start_time"         :          ： 2021-05-17 02:13:48
+ * "end_time"           :          ： 2021-06-07 02:13:48
+ * "page"               :          ： 1
+ * "size"               :          :  10
+ * "file_name"          :          :  sp_speech.wav
+ * "transcribe_status"  :          :  0
+ */
+int sp_speech_asr_file_list(char **json_text /*out sp_free later*/, void *params /*in*/);
+
 int sp_speech_asr_file_stop(const char *task_id /*in*/);
 
 /* stream asr api */
-int sp_speech_asr_stream_start(char *task_id /*out*/, void *params /*in*/, const char *json_text /*in*/);
+int sp_speech_asr_stream_start(char *task_id /*out*/, void *params /*in*/);
 int sp_speech_asr_stream_stop(const char *task_id);
 
 #ifdef __cplusplus

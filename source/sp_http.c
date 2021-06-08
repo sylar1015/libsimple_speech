@@ -119,6 +119,12 @@ sp_http_response_t *sp_http_post_json(const char *url,
     sp_return_val_if_fail(url && json, NULL);
     const char *text = sp_json_text(json);
 
+    if (headers == NULL)
+    {
+        headers = sp_json_object_new();
+        sp_json_object_add(headers, "Content-Type", sp_json_string("application/json"));
+    }
+
     int length = sp_string_length(text);
     sp_http_response_t *res = sp_http_post(url, headers, timeout, text, length);
 
