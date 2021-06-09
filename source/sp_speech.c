@@ -28,7 +28,7 @@ typedef struct sp_speech_handle_t {
     char ltasr_create_url[1024];
     char ltasr_query_url[1024];
     char ltasr_list_url[1204];
-    //char ltasr_cancel_url[1024];
+    char ltasr_cancel_url[1024];
 
 } sp_speech_handle_t;
 
@@ -87,6 +87,9 @@ int sp_speech_set_global_params(const char *key, const char *value)
 
         sp_string_append(s_handle.ltasr_list_url, "%s", s_handle.api_gateway_url);
         sp_string_append(s_handle.ltasr_list_url, "%s", "/ltasr/list/info");
+
+        sp_string_append(s_handle.ltasr_cancel_url, "%s", s_handle.api_gateway_url);
+        sp_string_append(s_handle.ltasr_cancel_url, "%s", "/ltasr/del");
     }
 
     return 0;
@@ -279,28 +282,37 @@ int sp_speech_asr_file_query(char **json_text /*out*/, const char* task_id /*in*
 int sp_speech_asr_file_stop(const char *task_id /*in*/)
 {
     sp_return_val_if_fail(task_id, -1);
-    return 0;
 
-#if 0
-    char url[1024];
-    sp_string_clear(url);
-    sp_string_append(url, "%s%s", s_handle.ltasr_cancel_url, task_id);
+    sp_json_t *payload = sp_json_object_new();
+    sp_json_object_add(payload, "taskId", sp_json_string(task_id));
 
-    sp_http_response_t *res = sp_http_delete(url, NULL, 3);
+    sp_http_response_t *res = sp_http_post_json(s_handle.ltasr_cancel_url, NULL, 0, payload);
+    sp_json_free(payload);
     sp_return_val_if_fail(res, -1);
 
-    sp_json_t *json = sp_json_parse(sp_string_buffer_string(res->raw_body));
+    int result = 0;
+    sp_json_t *json = NULL;
+
+    do{
+    
+        json = sp_json_parse(sp_string_buffer_string(res->raw_body));
+        sp_break_op_if_fail(json, result = -1);
+
+        sp_json_t *node = sp_json_object_item(json, "code");
+        sp_break_op_if_fail(node, result = -1);
+
+        result = node->valueint == 0 ? 0 : -1;
+
+    } while(0);
+    
+    if (json)
+    {
+        sp_json_free(json);
+    }
+    
     sp_http_response_free(res);
 
-    sp_return_val_if_fail(json, -1);
-    sp_json_t *node = sp_json_object_item(json, "rtn");
-    sp_return_val_if_fail(node, -1);
-
-    int result = node->valueint == 0 ? 0 : -1;
-
-    sp_json_free(json);
     return result;
-#endif
 }
 
 int sp_speech_asr_stream_start(char *task_id /*out*/, void *params /*in*/)

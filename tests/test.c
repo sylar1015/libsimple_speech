@@ -333,6 +333,9 @@ static int test_ltasr()
             char *result_text = sp_json_text(node);
             printf("%s\n", result_text);
             sp_free(result_text);
+
+            /* del the file */
+            sp_speech_asr_file_stop(task_id);
             break;
         }
         else{
@@ -344,7 +347,7 @@ static int test_ltasr()
 
         sp_usleep(SP_SECOND * 5);
     }
-    
+
     sp_speech_fini();
     return 0;
 }
